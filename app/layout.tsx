@@ -2,8 +2,12 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Inter } from 'next/font/google';
 import Link from 'next/link';
-import { BarChart3, ClipboardList, LogIn, Menu, Upload, UsersRound, UserRoundCheck } from 'lucide-react';
+import { BarChart3, ClipboardList, Upload, UsersRound, UserRoundCheck } from 'lucide-react';
 import { AuthButtons } from '@/components/auth/auth-buttons';
+import { MobileBottomNavigation, MobileTopMenu } from '@/components/mobile-navigation';
+import { getUserRoleSafe } from '@/lib/authz';
+import { createSupabaseServerClient, hasSupabaseEnv } from '@/lib/supabase/server';
+import type { Role } from '@/lib/types';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -28,7 +32,32 @@ const nav = [
   { href: '/import', label: 'Import', icon: Upload }
 ];
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+const surveyorNav = [
+  { href: '/my-leads', label: 'Home', icon: BarChart3 },
+  { href: '/my-leads#my-properties', label: 'Leads', icon: ClipboardList }
+];
+
+async function getSessionState(): Promise<{ loggedIn: boolean; role: Role | null }> {
+  if (!hasSupabaseEnv()) {
+    return { loggedIn: false, role: null };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  return {
+    loggedIn: Boolean(user),
+    role: await getUserRoleSafe(user?.id)
+  };
+}
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const { loggedIn, role } = await getSessionState();
+  const visibleNav = role === 'surveyor' ? surveyorNav : nav;
+  const homeHref = role === 'surveyor' ? '/my-leads' : '/dashboard';
+
   return (
     <html lang="en">
       <body className={inter.className}>
@@ -36,7 +65,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="h-4 bg-brand md:h-5" />
           <header className="border-b border-line bg-white">
             <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4">
-              <Link href="/dashboard" className="flex items-center gap-3 text-lg font-semibold text-ink">
+              <Link href={homeHref} className="flex items-center gap-3 text-lg font-semibold text-ink">
                 <img
                   src="/icon-192.png"
                   alt="Kabul London"
@@ -45,7 +74,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 Kabul London
               </Link>
               <nav className="hidden flex-wrap gap-2 md:flex">
-                {nav.map((item) => {
+                {visibleNav.map((item) => {
                   const Icon = item.icon;
                   return (
                     <Link
@@ -58,33 +87,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     </Link>
                   );
                 })}
-                <AuthButtons />
+                <AuthButtons loggedIn={loggedIn} />
               </nav>
-              <div className="flex items-center gap-4 md:hidden">
-                <span className="h-3 w-3 rounded-full bg-emerald-500" />
-                <Menu className="h-7 w-7 text-ink" />
-              </div>
+              <MobileTopMenu loggedIn={loggedIn} role={role} />
             </div>
           </header>
           <main className="mx-auto max-w-7xl px-4 py-6 pb-24 md:pb-6">{children}</main>
-          <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-line bg-white md:hidden">
-            <Link className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-ink" href="/dashboard">
-              <BarChart3 className="h-5 w-5" />
-              Home
-            </Link>
-            <Link className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-ink" href="/my-leads">
-              <UserRoundCheck className="h-5 w-5" />
-              My leads
-            </Link>
-            <Link className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-ink" href="/leads">
-              <ClipboardList className="h-5 w-5" />
-              Leads
-            </Link>
-            <Link className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-ink" href="/login">
-              <LogIn className="h-5 w-5" />
-              Login
-            </Link>
-          </nav>
+          <MobileBottomNavigation loggedIn={loggedIn} role={role} />
         </div>
       </body>
     </html>
