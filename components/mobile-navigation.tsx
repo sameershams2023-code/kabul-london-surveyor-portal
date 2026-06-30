@@ -2,17 +2,14 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   BarChart3,
-  CalendarDays,
   ClipboardList,
-  DoorOpen,
   LogIn,
   LogOut,
-  Map,
   Menu,
-  NotebookTabs,
-  UserRoundCheck
+  Home
 } from 'lucide-react';
 import { createSupabaseServerClient, hasSupabaseEnv } from '@/lib/supabase/server';
+import type { Role } from '@/lib/types';
 
 async function signOut() {
   'use server';
@@ -25,30 +22,18 @@ async function signOut() {
   redirect('/login');
 }
 
-const mobileMenuItems = [
-  { href: '/my-leads', label: 'My Schedule', icon: CalendarDays },
-  { href: '/my-leads', label: 'My Properties', icon: ClipboardList },
-  { href: '/my-leads', label: 'Map', icon: Map },
-  { href: '/my-leads', label: 'Door Knock Map', icon: DoorOpen },
-  { href: '/dashboard', label: 'My Report', icon: BarChart3 },
-  { href: '/dashboard', label: 'My Activity', icon: NotebookTabs }
+const adminMenuItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+  { href: '/leads', label: 'Leads', icon: ClipboardList }
 ];
 
-async function getLoggedIn() {
-  if (!hasSupabaseEnv()) {
-    return false;
-  }
+const surveyorMenuItems = [
+  { href: '/my-leads', label: 'Home', icon: Home },
+  { href: '/my-leads#my-properties', label: 'Leads', icon: ClipboardList }
+];
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  return Boolean(user);
-}
-
-export async function MobileTopMenu() {
-  const loggedIn = await getLoggedIn();
+export function MobileTopMenu({ loggedIn, role }: { loggedIn: boolean; role: Role | null }) {
+  const menuItems = role === 'surveyor' ? surveyorMenuItems : adminMenuItems;
 
   return (
     <div className="flex items-center gap-4 md:hidden">
@@ -59,7 +44,7 @@ export async function MobileTopMenu() {
         </summary>
         <div className="fixed inset-x-0 top-[92px] z-30 border-b border-line bg-white px-8 py-3 shadow-soft">
           <div className="space-y-1">
-            {mobileMenuItems.map((item) => {
+            {menuItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
@@ -94,20 +79,16 @@ export async function MobileTopMenu() {
   );
 }
 
-export async function MobileBottomNavigation() {
-  const loggedIn = await getLoggedIn();
+export function MobileBottomNavigation({ loggedIn, role }: { loggedIn: boolean; role: Role | null }) {
+  const isSurveyor = role === 'surveyor';
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-line bg-white md:hidden">
-      <Link className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-ink" href="/dashboard">
-        <BarChart3 className="h-5 w-5" />
+    <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-3 border-t border-line bg-white md:hidden">
+      <Link className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-ink" href={isSurveyor ? '/my-leads' : '/dashboard'}>
+        <Home className="h-5 w-5" />
         Home
       </Link>
-      <Link className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-ink" href="/my-leads">
-        <UserRoundCheck className="h-5 w-5" />
-        My leads
-      </Link>
-      <Link className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-ink" href="/leads">
+      <Link className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-ink" href={isSurveyor ? '/my-leads#my-properties' : '/leads'}>
         <ClipboardList className="h-5 w-5" />
         Leads
       </Link>
