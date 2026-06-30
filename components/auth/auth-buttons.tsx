@@ -14,25 +14,8 @@ async function signOut() {
   redirect('/login');
 }
 
-export async function AuthButtons() {
-  if (!hasSupabaseEnv()) {
-    return (
-      <Link
-        href="/login"
-        className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-brand hover:text-brand"
-      >
-        <LogIn className="h-4 w-4" />
-        Login
-      </Link>
-    );
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+export function AuthButtons({ loggedIn }: { loggedIn: boolean }) {
+  if (!loggedIn) {
     return (
       <Link
         href="/login"
