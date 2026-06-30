@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { BarChart3, ClipboardList, Upload, UsersRound, UserRoundCheck } from 'lucide-react';
 import { AuthButtons } from '@/components/auth/auth-buttons';
 import { MobileBottomNavigation, MobileTopMenu } from '@/components/mobile-navigation';
+import { getUserRoleSafe } from '@/lib/authz';
+import { createSupabaseServerClient, hasSupabaseEnv } from '@/lib/supabase/server';
+import type { Role } from '@/lib/types';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -29,7 +32,32 @@ const nav = [
   { href: '/import', label: 'Import', icon: Upload }
 ];
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+const surveyorNav = [
+  { href: '/my-leads', label: 'Home', icon: BarChart3 },
+  { href: '/my-leads#my-properties', label: 'Leads', icon: ClipboardList }
+];
+
+async function getSessionState(): Promise<{ loggedIn: boolean; role: Role | null }> {
+  if (!hasSupabaseEnv()) {
+    return { loggedIn: false, role: null };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  return {
+    loggedIn: Boolean(user),
+    role: await getUserRoleSafe(user?.id)
+  };
+}
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const { loggedIn, role } = await getSessionState();
+  const visibleNav = role === 'surveyor' ? surveyorNav : nav;
+  const homeHref = role === 'surveyor' ? '/my-leads' : '/dashboard';
+
   return (
     <html lang="en">
       <body className={inter.className}>
@@ -37,7 +65,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="h-4 bg-brand md:h-5" />
           <header className="border-b border-line bg-white">
             <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4">
-              <Link href="/dashboard" className="flex items-center gap-3 text-lg font-semibold text-ink">
+              <Link href={homeHref} className="flex items-center gap-3 text-lg font-semibold text-ink">
                 <img
                   src="/icon-192.png"
                   alt="Kabul London"
@@ -46,7 +74,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 Kabul London
               </Link>
               <nav className="hidden flex-wrap gap-2 md:flex">
-                {nav.map((item) => {
+                {visibleNav.map((item) => {
                   const Icon = item.icon;
                   return (
                     <Link
@@ -59,13 +87,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     </Link>
                   );
                 })}
-                <AuthButtons />
+                <AuthButtons loggedIn={loggedIn} />
               </nav>
-              <MobileTopMenu />
+              <MobileTopMenu loggedIn={loggedIn} role={role} />
             </div>
           </header>
           <main className="mx-auto max-w-7xl px-4 py-6 pb-24 md:pb-6">{children}</main>
-          <MobileBottomNavigation />
+          <MobileBottomNavigation loggedIn={loggedIn} role={role} />
         </div>
       </body>
     </html>
