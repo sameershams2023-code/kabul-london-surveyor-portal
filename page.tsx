@@ -20,7 +20,7 @@ export default async function LeadsPage({
     const role = await getUserRoleSafe(user?.id);
 
     if (role === 'surveyor') {
-      redirect('/my-leads#my-properties');
+      redirect('/my-properties');
     }
   }
 

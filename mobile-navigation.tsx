@@ -29,7 +29,7 @@ const adminMenuItems = [
 
 const surveyorMenuItems = [
   { href: '/my-leads', label: 'Home', icon: Home },
-  { href: '/my-leads#my-properties', label: 'Leads', icon: ClipboardList }
+  { href: '/my-properties', label: 'Leads', icon: ClipboardList }
 ];
 
 export function MobileTopMenu({ loggedIn, role }: { loggedIn: boolean; role: Role | null }) {
@@ -88,7 +88,7 @@ export function MobileBottomNavigation({ loggedIn, role }: { loggedIn: boolean; 
         <Home className="h-5 w-5" />
         Home
       </Link>
-      <Link className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-ink" href={isSurveyor ? '/my-leads#my-properties' : '/leads'}>
+      <Link className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-ink" href={isSurveyor ? '/my-properties' : '/leads'}>
         <ClipboardList className="h-5 w-5" />
         Leads
       </Link>
