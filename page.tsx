@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { CalendarCheck, CheckCircle2, ClipboardList, DoorOpen, MapPin, MessageSquareText, Phone } from 'lucide-react';
+import { CalendarCheck, CheckCircle2, ClipboardList, DoorOpen, MapPin, MessageSquareText, Navigation, Phone } from 'lucide-react';
 import { StatusBadge } from '@/components/status-badge';
 import { SurveyorPropertyActions } from '@/components/surveyor-property-actions';
 import { getLeads } from '@/lib/data';
@@ -108,7 +108,7 @@ export default async function MyLeadsPage() {
       <section className="space-y-3 border-t border-line pt-5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-extrabold text-ink">Today's Bookings</h2>
-          <Link className="text-sm font-semibold text-slate-600" href="/leads">
+          <Link className="text-sm font-semibold text-slate-600" href="/schedule">
             View schedule -&gt;
           </Link>
         </div>
@@ -158,6 +158,9 @@ function StatusPill({ label, value, className }: { label: string; value: number;
 }
 
 function LeadCard({ lead }: { lead: Lead }) {
+  const fullAddress = [lead.property_address, lead.postcode].filter(Boolean).join(', ');
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`;
+
   return (
     <article className="rounded-md border border-line bg-white p-4 shadow-soft">
       <div className="flex items-start justify-between gap-3">
@@ -184,6 +187,15 @@ function LeadCard({ lead }: { lead: Lead }) {
       >
         View details
       </Link>
+      <a
+        className="ml-2 mt-3 inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-xs font-extrabold text-white"
+        href={directionsUrl}
+        target="_blank"
+        rel="noreferrer"
+      >
+        <Navigation className="h-4 w-4" />
+        Give directions
+      </a>
       <SurveyorPropertyActions leadId={lead.id} />
     </article>
   );
