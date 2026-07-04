@@ -60,6 +60,7 @@ export type Booking = {
   customer_email: string | null;
   customer_phone: string | null;
   created_at: string;
+  leads?: Pick<Lead, 'id' | 'customer_name' | 'phone' | 'property_address' | 'postcode' | 'service_type'> | null;
 };
 
 export type LeadStatusHistory = {
