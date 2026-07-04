@@ -1,16 +1,37 @@
+import { redirect } from 'next/navigation';
 import { Filter, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { LeadTable } from '@/components/lead-table';
+import { getUserRoleSafe } from '@/lib/authz';
 import { getLeads, getSurveyors } from '@/lib/data';
 import { leadStatuses } from '@/lib/status';
+import { createSupabaseServerClient, hasSupabaseEnv } from '@/lib/supabase/server';
 
 export default async function LeadsPage({
   searchParams
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  if (hasSupabaseEnv()) {
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    const role = await getUserRoleSafe(user?.id);
+
+    if (role === 'surveyor') {
+      redirect('/my-properties');
+    }
+  }
+
   const params = await searchParams;
   const [leads, surveyors] = await Promise.all([getLeads(), getSurveyors()]);
+  const supabase = hasSupabaseEnv() ? await createSupabaseServerClient() : null;
+  const {
+    data: { user }
+  } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  const role = await getUserRoleSafe(user?.id);
+  const canAssignAndImport = role === 'owner' || role === 'admin';
   const query = String(params.q ?? '').toLowerCase();
   const status = String(params.status ?? '');
   const surveyor = String(params.surveyor ?? '');
@@ -31,13 +52,15 @@ export default async function LeadsPage({
           <h1 className="text-2xl font-semibold text-ink">Leads</h1>
           <p className="text-sm text-slate-600">Filter, search, bulk assign, and import customer leads.</p>
         </div>
-        <Link
-          className="inline-flex items-center gap-2 rounded-md bg-action px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
-          href="/import"
-        >
-          <Upload className="h-4 w-4" />
-          CSV import
-        </Link>
+        {canAssignAndImport ? (
+          <Link
+            className="inline-flex items-center gap-2 rounded-md bg-action px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+            href="/import"
+          >
+            <Upload className="h-4 w-4" />
+            CSV import
+          </Link>
+        ) : null}
       </div>
 
       <form className="grid gap-3 rounded-md border border-line bg-white p-4 shadow-soft md:grid-cols-5">
@@ -67,23 +90,25 @@ export default async function LeadsPage({
         </button>
       </form>
 
-      <section className="rounded-md border border-line bg-white p-4 shadow-soft">
-        <div className="grid gap-3 md:grid-cols-[1fr_240px_auto]">
-          <select className="rounded-md border border-line px-3 py-2" defaultValue="">
-            <option value="">Select visible leads</option>
-            <option value="all">All filtered leads</option>
-          </select>
-          <select className="rounded-md border border-line px-3 py-2" defaultValue="">
-            <option value="">Assign to surveyor</option>
-            {surveyors.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.full_name}
-              </option>
-            ))}
-          </select>
-          <button className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white">Bulk assign</button>
-        </div>
-      </section>
+      {canAssignAndImport ? (
+        <section className="rounded-md border border-line bg-white p-4 shadow-soft">
+          <div className="grid gap-3 md:grid-cols-[1fr_240px_auto]">
+            <select className="rounded-md border border-line px-3 py-2" defaultValue="">
+              <option value="">Select visible leads</option>
+              <option value="all">All filtered leads</option>
+            </select>
+            <select className="rounded-md border border-line px-3 py-2" defaultValue="">
+              <option value="">Assign to surveyor</option>
+              {surveyors.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.full_name}
+                </option>
+              ))}
+            </select>
+            <button className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white">Bulk assign</button>
+          </div>
+        </section>
+      ) : null}
 
       <LeadTable leads={filtered} />
     </div>
