@@ -47,8 +47,8 @@ export async function POST(request: Request) {
   } = await userClient.auth.getUser();
 
   const role = await getUserRole(user?.id);
-  if (!hasRole(role, ['owner', 'admin', 'manager'])) {
-    return NextResponse.json({ error: 'Only admins and managers can import leads.' }, { status: 403 });
+  if (!hasRole(role, ['owner', 'admin'])) {
+    return NextResponse.json({ error: 'Only admins can import leads.' }, { status: 403 });
   }
 
   const admin = createSupabaseAdminClient();

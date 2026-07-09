@@ -144,7 +144,7 @@ export function ImportPreview() {
       {rows.length > 0 ? (
         <>
           <div className="flex flex-col gap-3 rounded-md border border-line bg-white p-4 md:flex-row md:items-center md:justify-between">
-            <div className="text-sm text-slate-600">{result || 'Only valid rows will be imported.'}</div>
+            <div className="text-sm text-slate-600">{result || 'Only admins can import valid rows.'}</div>
             <button
               className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               disabled={!validation.valid.length}

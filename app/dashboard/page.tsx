@@ -1,8 +1,23 @@
+import { redirect } from 'next/navigation';
 import { LeadTable } from '@/components/lead-table';
 import { StatusBadge } from '@/components/status-badge';
+import { getUserRoleSafe } from '@/lib/authz';
 import { getLeadMetrics, getLeads, getRecentStatusHistory, getSurveyors } from '@/lib/data';
+import { createSupabaseServerClient, hasSupabaseEnv } from '@/lib/supabase/server';
 
 export default async function DashboardPage() {
+  if (hasSupabaseEnv()) {
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    const role = await getUserRoleSafe(user?.id);
+
+    if (role === 'surveyor') {
+      redirect('/my-leads');
+    }
+  }
+
   const [leads, surveyors, history] = await Promise.all([getLeads(), getSurveyors(), getRecentStatusHistory()]);
   const metrics = getLeadMetrics(leads);
 

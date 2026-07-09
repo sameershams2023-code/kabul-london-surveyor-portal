@@ -34,7 +34,7 @@ const nav = [
 
 const surveyorNav = [
   { href: '/my-leads', label: 'Home', icon: BarChart3 },
-  { href: '/my-leads#my-properties', label: 'Leads', icon: ClipboardList }
+  { href: '/my-properties', label: 'Leads', icon: ClipboardList }
 ];
 
 async function getSessionState(): Promise<{ loggedIn: boolean; role: Role | null }> {

@@ -1,6 +1,25 @@
+import { redirect } from 'next/navigation';
 import { ImportPreview } from '@/components/import-preview';
+import { getUserRoleSafe } from '@/lib/authz';
+import { createSupabaseServerClient, hasSupabaseEnv } from '@/lib/supabase/server';
 
-export default function ImportPage() {
+export default async function ImportPage() {
+  if (!hasSupabaseEnv()) {
+    redirect('/login?error=Connect%20Supabase%20first');
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect('/login');
+
+  const role = await getUserRoleSafe(user.id);
+  if (role !== 'owner' && role !== 'admin') {
+    redirect(role === 'surveyor' ? '/my-leads#my-properties' : '/leads');
+  }
+
   return (
     <div className="space-y-5">
       <div>
