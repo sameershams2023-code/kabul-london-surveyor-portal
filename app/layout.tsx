@@ -5,9 +5,7 @@ import Link from 'next/link';
 import { BarChart3, ClipboardList, Upload, UsersRound, UserRoundCheck } from 'lucide-react';
 import { AuthButtons } from '@/components/auth/auth-buttons';
 import { MobileBottomNavigation, MobileTopMenu } from '@/components/mobile-navigation';
-import { getUserRoleSafe } from '@/lib/authz';
-import { createSupabaseServerClient, hasSupabaseEnv } from '@/lib/supabase/server';
-import type { Role } from '@/lib/types';
+import { getSessionState } from '@/lib/session';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -36,22 +34,6 @@ const surveyorNav = [
   { href: '/my-leads', label: 'Home', icon: BarChart3 },
   { href: '/my-properties', label: 'Leads', icon: ClipboardList }
 ];
-
-async function getSessionState(): Promise<{ loggedIn: boolean; role: Role | null }> {
-  if (!hasSupabaseEnv()) {
-    return { loggedIn: false, role: null };
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  return {
-    loggedIn: Boolean(user),
-    role: await getUserRoleSafe(user?.id)
-  };
-}
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const { loggedIn, role } = await getSessionState();
