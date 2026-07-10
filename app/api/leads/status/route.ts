@@ -42,18 +42,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Surveyors can only update their own leads.' }, { status: 403 });
   }
 
-  await admin
-    .from('leads')
-    .update({ current_status: parsed.data.status, updated_at: new Date().toISOString() })
-    .eq('id', lead.id);
-
-  await admin.from('lead_status_history').insert({
-    lead_id: lead.id,
-    old_status: lead.current_status,
-    new_status: parsed.data.status,
-    changed_by: user?.id ?? lead.created_by ?? null,
-    note: 'Status changed from portal.'
-  });
+  await Promise.all([
+    admin
+      .from('leads')
+      .update({ current_status: parsed.data.status, updated_at: new Date().toISOString() })
+      .eq('id', lead.id),
+    admin.from('lead_status_history').insert({
+      lead_id: lead.id,
+      old_status: lead.current_status,
+      new_status: parsed.data.status,
+      changed_by: user?.id ?? lead.created_by ?? null,
+      note: 'Status changed from portal.'
+    })
+  ]);
 
   return NextResponse.json({ ok: true });
 }
