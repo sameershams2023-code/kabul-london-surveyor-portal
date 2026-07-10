@@ -45,7 +45,7 @@ export default async function LoginPage({
         </div>
         <div>
           <h1 className="text-2xl font-semibold text-ink">Kabul London login</h1>
-          <p className="text-sm text-slate-600">Admin and surveyor access for Kabul London.</p>
+          <p className="text-sm text-slate-600">Sign in to continue.</p>
         </div>
       </div>
 
