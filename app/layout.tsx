@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Inter } from 'next/font/google';
-import { headers } from 'next/headers';
 import Link from 'next/link';
 import { BarChart3, ClipboardList, Upload, UsersRound, UserRoundCheck } from 'lucide-react';
 import { AuthButtons } from '@/components/auth/auth-buttons';
@@ -38,8 +37,7 @@ const surveyorNav = [
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const { loggedIn, role } = await getSessionState();
-  const pathname = (await headers()).get('x-pathname') ?? '';
-  const hideNavigation = pathname === '/login';
+  const hideNavigation = !loggedIn;
   const visibleNav = role === 'surveyor' ? surveyorNav : nav;
   const homeHref = role === 'surveyor' ? '/my-leads' : '/dashboard';
 
