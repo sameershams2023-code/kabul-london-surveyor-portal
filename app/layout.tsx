@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import Link from 'next/link';
 import { BarChart3, ClipboardList, Upload, UsersRound, UserRoundCheck } from 'lucide-react';
 import { AuthButtons } from '@/components/auth/auth-buttons';
+import { HideOnLogin } from '@/components/hide-on-login';
 import { MobileBottomNavigation, MobileTopMenu } from '@/components/mobile-navigation';
 import { getSessionState } from '@/lib/session';
 import './globals.css';
@@ -37,7 +38,6 @@ const surveyorNav = [
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const { loggedIn, role } = await getSessionState();
-  const hideNavigation = !loggedIn;
   const visibleNav = role === 'surveyor' ? surveyorNav : nav;
   const homeHref = role === 'surveyor' ? '/my-leads' : '/dashboard';
 
@@ -45,7 +45,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang="en">
       <body className={inter.className}>
         <div className="min-h-screen">
-          {hideNavigation ? null : (
+          <HideOnLogin>
             <>
               <div className="h-4 bg-brand md:h-5" />
               <header className="border-b border-line bg-white">
@@ -78,11 +78,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 </div>
               </header>
             </>
-          )}
-          <main className={`mx-auto max-w-7xl px-4 py-6 ${hideNavigation ? 'md:py-10' : 'pb-24 md:pb-6'}`}>
+          </HideOnLogin>
+          <main className="mx-auto max-w-7xl px-4 py-6 pb-24 md:pb-6">
             {children}
           </main>
-          {hideNavigation ? null : <MobileBottomNavigation loggedIn={loggedIn} role={role} />}
+          <HideOnLogin>
+            <MobileBottomNavigation loggedIn={loggedIn} role={role} />
+          </HideOnLogin>
         </div>
       </body>
     </html>
