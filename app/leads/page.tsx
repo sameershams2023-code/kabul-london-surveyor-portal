@@ -2,35 +2,23 @@ import { redirect } from 'next/navigation';
 import { Filter, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { LeadTable } from '@/components/lead-table';
-import { getUserRoleSafe } from '@/lib/authz';
 import { getLeads, getSurveyors } from '@/lib/data';
+import { getSessionState } from '@/lib/session';
 import { leadStatuses } from '@/lib/status';
-import { createSupabaseServerClient, hasSupabaseEnv } from '@/lib/supabase/server';
 
 export default async function LeadsPage({
   searchParams
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  if (hasSupabaseEnv()) {
-    const supabase = await createSupabaseServerClient();
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
-    const role = await getUserRoleSafe(user?.id);
+  const { role } = await getSessionState();
 
-    if (role === 'surveyor') {
-      redirect('/my-properties');
-    }
+  if (role === 'surveyor') {
+    redirect('/my-properties');
   }
 
   const params = await searchParams;
   const [leads, surveyors] = await Promise.all([getLeads(), getSurveyors()]);
-  const supabase = hasSupabaseEnv() ? await createSupabaseServerClient() : null;
-  const {
-    data: { user }
-  } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
-  const role = await getUserRoleSafe(user?.id);
   const canAssignAndImport = role === 'owner' || role === 'admin';
   const query = String(params.q ?? '').toLowerCase();
   const status = String(params.status ?? '');
