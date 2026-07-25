@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { CalendarCheck, Plus, UserRoundPlus } from 'lucide-react';
+import { SurveyorManager } from '@/components/surveyor-manager';
 import { getSurveyors } from '@/lib/data';
 import { createSupabaseAdminClient, hasSupabaseEnv } from '@/lib/supabase/server';
 
@@ -81,6 +81,84 @@ async function createSurveyor(formData: FormData) {
   redirect('/surveyors?created=1');
 }
 
+async function updateSurveyor(formData: FormData) {
+  'use server';
+
+  if (!hasSupabaseEnv()) {
+    redirect('/surveyors?error=Connect%20Supabase%20before%20updating%20surveyor%20logins');
+  }
+
+  const surveyorId = String(formData.get('surveyor_id') ?? '').trim();
+  const userId = String(formData.get('user_id') ?? '').trim();
+  const fullName = String(formData.get('full_name') ?? '').trim();
+  const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  const password = String(formData.get('password') ?? '');
+  const phone = String(formData.get('phone') ?? '').trim();
+  const serviceArea = String(formData.get('service_area') ?? '').trim();
+  const tidycalLink = String(formData.get('tidycal_link') ?? '').trim();
+  const active = formData.get('active') === 'true';
+
+  if (!surveyorId || !fullName || !email) {
+    redirect('/surveyors?error=Surveyor,%20full%20name,%20and%20email%20are%20required');
+  }
+
+  const admin = createSupabaseAdminClient();
+
+  if (userId) {
+    const authUpdate: {
+      email: string;
+      password?: string;
+      user_metadata: {
+        full_name: string;
+        role: 'surveyor';
+      };
+    } = {
+      email,
+      user_metadata: {
+        full_name: fullName,
+        role: 'surveyor'
+      }
+    };
+
+    if (password) {
+      authUpdate.password = password;
+    }
+
+    const { error: authError } = await admin.auth.admin.updateUserById(userId, authUpdate);
+
+    if (authError) {
+      redirect(`/surveyors?error=${encodeURIComponent(authError.message)}`);
+    }
+
+    const { error: roleError } = await admin.from('user_roles').upsert({
+      user_id: userId,
+      role: 'surveyor'
+    });
+
+    if (roleError) {
+      redirect(`/surveyors?error=${encodeURIComponent(roleError.message)}`);
+    }
+  }
+
+  const { error: surveyorError } = await admin
+    .from('surveyors')
+    .update({
+      full_name: fullName,
+      email,
+      phone: phone || null,
+      tidycal_link: tidycalLink || null,
+      service_area: serviceArea || null,
+      active
+    })
+    .eq('id', surveyorId);
+
+  if (surveyorError) {
+    redirect(`/surveyors?error=${encodeURIComponent(surveyorError.message)}`);
+  }
+
+  redirect(`/surveyors?updated=1&selected=${surveyorId}`);
+}
+
 export default async function SurveyorsPage({
   searchParams
 }: {
@@ -90,6 +168,8 @@ export default async function SurveyorsPage({
   const surveyors = await getSurveyors();
   const error = typeof params.error === 'string' ? params.error : null;
   const created = params.created === '1';
+  const updated = params.updated === '1';
+  const selectedId = typeof params.selected === 'string' ? params.selected : null;
 
   return (
     <div className="space-y-5">
@@ -117,96 +197,19 @@ export default async function SurveyorsPage({
         </div>
       ) : null}
 
-      <section className="rounded-md border border-line bg-white p-5 shadow-soft">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-brand text-white">
-            <UserRoundPlus className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-ink">Add surveyor login</h2>
-            <p className="text-sm text-slate-600">This creates their app login and surveyor profile together.</p>
-          </div>
+      {updated ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          Surveyor details saved.
         </div>
+      ) : null}
 
-        <form action={createSurveyor} className="grid gap-3 md:grid-cols-2">
-          <Field label="Full name" name="full_name" placeholder="Sameer Shams" required />
-          <Field label="Email login" name="email" placeholder="sameer@kabullondon.co.uk" type="email" required />
-          <Field label="Temporary password" name="password" placeholder="Set a strong password" type="password" required />
-          <Field label="Phone" name="phone" placeholder="+447..." />
-          <Field label="Service area" name="service_area" placeholder="West London" />
-          <Field label="TidyCal booking link" name="tidycal_link" placeholder="https://tidycal.com/..." />
-          <div className="md:col-span-2">
-            <button
-              className="inline-flex items-center gap-2 rounded-md bg-action px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              disabled={!hasSupabaseEnv()}
-              type="submit"
-            >
-              <Plus className="h-4 w-4" />
-              Create surveyor login
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {surveyors.map((surveyor) => (
-          <article key={surveyor.id} className="rounded-md border border-line bg-white p-5 shadow-soft">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-ink">{surveyor.full_name}</h2>
-                <p className="text-sm text-slate-600">{surveyor.email}</p>
-              </div>
-              <span className="rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
-                {surveyor.active ? 'Active' : 'Inactive'}
-              </span>
-            </div>
-            <dl className="mt-5 grid gap-3 text-sm">
-              <div>
-                <dt className="font-semibold text-slate-500">Phone</dt>
-                <dd>{surveyor.phone ?? 'Not saved'}</dd>
-              </div>
-              <div>
-                <dt className="font-semibold text-slate-500">Service area</dt>
-                <dd>{surveyor.service_area ?? 'Not saved'}</dd>
-              </div>
-              <div>
-                <dt className="font-semibold text-slate-500">TidyCal booking link</dt>
-                <dd className="mt-1 inline-flex items-center gap-2 break-all text-brand">
-                  <CalendarCheck className="h-4 w-4 shrink-0" />
-                  {surveyor.tidycal_link ?? 'Not set'}
-                </dd>
-              </div>
-            </dl>
-          </article>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  name,
-  placeholder,
-  type = 'text',
-  required = false
-}: {
-  label: string;
-  name: string;
-  placeholder: string;
-  type?: string;
-  required?: boolean;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-semibold text-ink">{label}</span>
-      <input
-        className="w-full rounded-md border border-line px-3 py-2"
-        name={name}
-        placeholder={placeholder}
-        required={required}
-        type={type}
+      <SurveyorManager
+        canSubmit={hasSupabaseEnv()}
+        createSurveyorAction={createSurveyor}
+        selectedId={selectedId}
+        surveyors={surveyors}
+        updateSurveyorAction={updateSurveyor}
       />
-    </label>
+    </div>
   );
 }
