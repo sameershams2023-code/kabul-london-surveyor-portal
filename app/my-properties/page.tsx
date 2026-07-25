@@ -1,10 +1,30 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { Search } from 'lucide-react';
 import { SurveyorPropertyCard } from '@/components/surveyor-property-card';
 import { createSupabaseServerClient, hasSupabaseEnv } from '@/lib/supabase/server';
 import type { Lead, Surveyor } from '@/lib/types';
 
-export default async function MyPropertiesPage() {
+function matchesSearch(lead: Lead, query: string) {
+  if (!query) {
+    return true;
+  }
+
+  return [lead.customer_name, lead.phone, lead.email, lead.property_address, lead.postcode, lead.service_type, lead.current_status]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+    .includes(query);
+}
+
+export default async function MyPropertiesPage({
+  searchParams
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const query = String(params.q ?? '').trim().toLowerCase();
+
   if (!hasSupabaseEnv()) {
     redirect('/login?error=Connect%20Supabase%20first%20to%20use%20real%20surveyor%20accounts');
   }
@@ -36,6 +56,7 @@ export default async function MyPropertiesPage() {
     .order('created_at', { ascending: false });
 
   const leads = (data as Lead[] | null) ?? [];
+  const filteredLeads = leads.filter((lead) => matchesSearch(lead, query));
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -54,12 +75,39 @@ export default async function MyPropertiesPage() {
         </p>
       </section>
 
+      <form className="rounded-md border border-line bg-white p-3 shadow-soft">
+        <label className="relative block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+          <input
+            className="w-full rounded-md border border-line py-3 pl-10 pr-3 text-base font-medium text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+            defaultValue={query}
+            name="q"
+            placeholder="Search name, phone, address, postcode..."
+            type="search"
+          />
+        </label>
+        <button className="mt-3 w-full rounded-md bg-brand px-4 py-3 text-sm font-extrabold text-white" type="submit">
+          Search properties
+        </button>
+        {query ? (
+          <Link className="mt-3 inline-flex text-sm font-semibold text-slate-600" href="/my-properties">
+            Clear search
+          </Link>
+        ) : null}
+      </form>
+
       <section className="space-y-3 pb-8">
-        {leads.length ? (
-          leads.map((lead) => <SurveyorPropertyCard key={lead.id} lead={lead} />)
+        {query ? (
+          <div className="text-sm font-semibold text-slate-500">
+            Showing {filteredLeads.length} of {leads.length} properties
+          </div>
+        ) : null}
+
+        {filteredLeads.length ? (
+          filteredLeads.map((lead) => <SurveyorPropertyCard key={lead.id} lead={lead} />)
         ) : (
           <div className="rounded-md border border-line bg-white p-5 text-center text-sm font-medium text-slate-500">
-            No properties assigned yet
+            {leads.length ? 'No properties match your search' : 'No properties assigned yet'}
           </div>
         )}
       </section>
