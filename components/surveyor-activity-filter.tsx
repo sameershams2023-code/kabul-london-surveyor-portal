@@ -19,10 +19,10 @@ export function SurveyorActivityFilter({
 
   const activeSurveyors = useMemo(
     () =>
-      surveyors.filter((surveyor) =>
-        history.some((item) => surveyor.user_id && item.changed_by === surveyor.user_id)
-      ),
-    [history, surveyors]
+      surveyors
+        .filter((surveyor) => surveyor.active && surveyor.user_id)
+        .sort((first, second) => first.full_name.localeCompare(second.full_name)),
+    [surveyors]
   );
 
   const filteredHistory = selectedSurveyorUserId
