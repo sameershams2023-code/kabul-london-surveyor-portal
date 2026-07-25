@@ -1,5 +1,3 @@
-import { clsx } from 'clsx';
-
 export const leadStatuses = [
   'New',
   'First attempt',
@@ -35,8 +33,8 @@ const badgeStyles: Record<LeadStatus, string> = {
 };
 
 export function statusBadgeClass(status: string) {
-  return clsx(
+  return [
     'inline-flex min-w-24 justify-center rounded-md border px-2.5 py-1 text-xs font-semibold',
     badgeStyles[status as LeadStatus] ?? 'border-line bg-white text-ink'
-  );
+  ].join(' ');
 }
