@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { LeadTable } from '@/components/lead-table';
-import { StatusBadge } from '@/components/status-badge';
+import { SurveyorActivityFilter } from '@/components/surveyor-activity-filter';
 import { getUserRoleSafe } from '@/lib/authz';
 import { getLeadMetrics, getLeads, getRecentStatusHistory, getSurveyors } from '@/lib/data';
 import { createSupabaseServerClient, hasSupabaseEnv } from '@/lib/supabase/server';
@@ -80,43 +80,10 @@ export default async function DashboardPage() {
       <section className="space-y-3">
         <div>
           <h2 className="text-lg font-semibold text-ink">Who did what</h2>
-          <p className="text-sm text-slate-600">Latest property status changes by surveyor or office user.</p>
+          <p className="text-sm text-slate-600">Click a surveyor to see only that person's property updates.</p>
         </div>
 
-        <div className="overflow-hidden rounded-md border border-line bg-white shadow-soft">
-          {history.length ? (
-            <div className="divide-y divide-line">
-              {history.map((item) => (
-                <div key={item.id} className="grid gap-3 p-4 md:grid-cols-[1fr_auto]">
-                  <div>
-                    <div className="font-semibold text-ink">
-                      {item.changed_by_surveyor?.full_name ?? item.changed_by_email ?? item.changed_by ?? 'Unknown user'}
-                    </div>
-                    <div className="mt-1 text-sm text-slate-600">
-                      Updated {item.leads?.customer_name ?? 'a property'}
-                      {item.leads?.property_address ? ` at ${item.leads.property_address}` : ''}
-                    </div>
-                    {item.note ? <div className="mt-1 text-sm text-slate-500">{item.note}</div> : null}
-                    <div className="mt-1 text-xs font-medium text-slate-500">
-                      {new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(
-                        new Date(item.created_at)
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {item.old_status ? <StatusBadge status={item.old_status} /> : null}
-                    <span className="text-sm font-semibold text-slate-400">to</span>
-                    <StatusBadge status={item.new_status} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-5 text-sm text-slate-500">
-              No status changes yet. When surveyors press their property buttons, activity will appear here.
-            </div>
-          )}
-        </div>
+        <SurveyorActivityFilter history={history} surveyors={surveyors} />
       </section>
     </div>
   );

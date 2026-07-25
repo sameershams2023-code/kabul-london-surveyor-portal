@@ -5,11 +5,11 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: '#1f2933',
-        line: '#d8dee8',
-        panel: '#f7f9fb',
-        brand: '#146c63',
-        action: '#2457c5'
+        brand: '#14756c',
+        action: '#2b5dcc',
+        ink: '#17212f',
+        line: '#d8e0ea',
+        panel: '#eef3f8'
       },
       boxShadow: {
         soft: '0 12px 30px rgba(15, 23, 42, 0.08)'

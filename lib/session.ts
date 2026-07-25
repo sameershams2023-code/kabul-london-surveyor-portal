@@ -17,9 +17,23 @@ export const getSessionState = cache(async (): Promise<{ loggedIn: boolean; role
     return { loggedIn: false, role: null, userId: null };
   }
 
+  const role = await getUserRoleSafe(user.id);
+
+  if (!role) {
+    const { data: surveyor } = await supabase.from('surveyors').select('id').eq('user_id', user.id).maybeSingle();
+
+    if (surveyor?.id) {
+      return {
+        loggedIn: true,
+        role: 'surveyor',
+        userId: user.id
+      };
+    }
+  }
+
   return {
     loggedIn: true,
-    role: await getUserRoleSafe(user.id),
+    role,
     userId: user.id
   };
 });

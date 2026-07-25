@@ -1,9 +1,12 @@
 'use client';
 
 import { MessageSquareText, Save } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { leadStatuses } from '@/lib/status';
 
 export function LeadActions({ leadId }: { leadId: string }) {
+  const router = useRouter();
+
   async function updateStatus(status: string) {
     const response = await fetch('/api/leads/status', {
       method: 'POST',
@@ -17,7 +20,7 @@ export function LeadActions({ leadId }: { leadId: string }) {
       return;
     }
 
-    window.location.reload();
+    router.refresh();
   }
 
   async function sendSms() {
@@ -33,7 +36,7 @@ export function LeadActions({ leadId }: { leadId: string }) {
       return;
     }
 
-    window.location.reload();
+    router.refresh();
   }
 
   return (
@@ -85,7 +88,8 @@ export function LeadActions({ leadId }: { leadId: string }) {
             return;
           }
 
-          window.location.reload();
+          event.currentTarget.reset();
+          router.refresh();
         }}
       >
         <label className="block text-sm font-semibold text-ink" htmlFor="note">

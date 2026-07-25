@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { LeadTable } from '@/components/lead-table';
 import { getLeads, getSurveyors } from '@/lib/data';
 import { getSessionState } from '@/lib/session';
+import { createSupabaseServerClient, hasSupabaseEnv } from '@/lib/supabase/server';
 import { leadStatuses } from '@/lib/status';
 
 export default async function LeadsPage({
@@ -11,10 +12,20 @@ export default async function LeadsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { role } = await getSessionState();
+  const { loggedIn, role, userId } = await getSessionState();
+  const isAdminUser = role === 'owner' || role === 'admin' || role === 'manager' || role === 'office_agent';
 
   if (role === 'surveyor') {
     redirect('/my-properties');
+  }
+
+  if (loggedIn && userId && !isAdminUser && hasSupabaseEnv()) {
+    const supabase = await createSupabaseServerClient();
+    const { data: surveyor } = await supabase.from('surveyors').select('id').eq('user_id', userId).maybeSingle();
+
+    if (surveyor?.id) {
+      redirect('/my-properties');
+    }
   }
 
   const params = await searchParams;
