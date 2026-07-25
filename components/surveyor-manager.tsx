@@ -124,7 +124,12 @@ export function SurveyorManager({
         {mode === 'create' ? (
           <CreateSurveyorForm action={createSurveyorAction} canSubmit={canSubmit} />
         ) : activeSurveyor ? (
-          <EditSurveyorForm action={updateSurveyorAction} canSubmit={canSubmit} surveyor={activeSurveyor} />
+          <EditSurveyorForm
+            action={updateSurveyorAction}
+            canSubmit={canSubmit}
+            key={activeSurveyor.id}
+            surveyor={activeSurveyor}
+          />
         ) : (
           <CreateSurveyorForm action={createSurveyorAction} canSubmit={canSubmit} />
         )}
