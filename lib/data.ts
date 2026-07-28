@@ -75,6 +75,31 @@ export async function getTodaysBookingsForSurveyor(surveyorId: string): Promise<
   return (data as Booking[] | null) ?? [];
 }
 
+export async function getUpcomingBookingsForSurveyor(surveyorId: string, daysAhead = 7): Promise<Booking[]> {
+  if (!hasSupabaseEnv()) return [];
+
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + daysAhead);
+
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('bookings')
+    .select(
+      `
+      *,
+      leads(id,customer_name,phone,property_address,postcode,service_type)
+    `
+    )
+    .eq('surveyor_id', surveyorId)
+    .gte('booking_time', start.toISOString())
+    .lt('booking_time', end.toISOString())
+    .order('booking_time', { ascending: true });
+
+  return (data as Booking[] | null) ?? [];
+}
+
 export async function getRecentStatusHistory(limit = 20): Promise<LeadStatusHistory[]> {
   if (!hasSupabaseEnv()) return [];
 
