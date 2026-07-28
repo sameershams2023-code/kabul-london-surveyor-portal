@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { CalendarDays, Clock, MapPinned, Navigation, Phone } from 'lucide-react';
-import { getTodaysBookingsForSurveyor } from '@/lib/data';
+import { getUpcomingBookingsForSurveyor } from '@/lib/data';
 import { createSupabaseServerClient, hasSupabaseEnv } from '@/lib/supabase/server';
+import { syncTidyCalBookings } from '@/lib/tidycal';
 import type { Surveyor } from '@/lib/types';
 
 function mapsDirectionsUrl(address: string) {
@@ -36,11 +37,25 @@ export default async function MyLeadsPage() {
 
   }
 
-  const bookings = surveyor ? await getTodaysBookingsForSurveyor(surveyor.id) : [];
+  if (surveyor && process.env.TIDYCAL_API_KEY) {
+    try {
+      await syncTidyCalBookings(30);
+    } catch {
+      // Home should still load even if TidyCal is temporarily unavailable.
+    }
+  }
+
+  const bookings = surveyor ? await getUpcomingBookingsForSurveyor(surveyor.id, 7) : [];
   const now = new Date();
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening';
   const today = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now);
   const firstName = surveyor?.full_name.split(' ')[0] ?? 'Admin';
+  const bookingsByDate = bookings.reduce<Record<string, typeof bookings>>((groups, booking) => {
+    const dateKey = booking.booking_time ? booking.booking_time.slice(0, 10) : 'unknown';
+    groups[dateKey] = groups[dateKey] ?? [];
+    groups[dateKey].push(booking);
+    return groups;
+  }, {});
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -71,55 +86,76 @@ export default async function MyLeadsPage() {
 
       <section className="space-y-3 border-t border-line pt-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-extrabold text-ink">Booked For Today</h2>
+          <h2 className="text-lg font-extrabold text-ink">Bookings This Week</h2>
           <Link className="text-sm font-semibold text-slate-600" href="/my-properties">
             All leads -&gt;
           </Link>
         </div>
         {bookings.length ? (
-          <div className="space-y-3">
-            {bookings.map((booking) => {
-              const lead = booking.leads;
-              const fullAddress = [lead?.property_address, lead?.postcode].filter(Boolean).join(', ');
-              const bookingTime = booking.booking_time
-                ? new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(
-                    new Date(booking.booking_time)
-                  )
-                : 'Time not set';
+          <div className="space-y-5">
+            {Object.entries(bookingsByDate).map(([dateKey, dayBookings]) => {
+              const dateLabel =
+                dateKey === 'unknown'
+                  ? 'Date not set'
+                  : new Intl.DateTimeFormat('en-GB', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long'
+                    }).format(new Date(`${dateKey}T00:00:00`));
 
               return (
-                <article key={booking.id} className="rounded-md border border-line bg-white p-4 shadow-soft">
-                  <h3 className="text-lg font-extrabold text-ink">{lead?.customer_name ?? booking.customer_name}</h3>
-                  <div className="mt-2 flex items-center gap-2 text-sm font-medium text-slate-600">
-                    <Clock className="h-4 w-4" />
-                    {bookingTime}
+                <div key={dateKey} className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-slate-600">
+                    <CalendarDays className="h-4 w-4" />
+                    {dateLabel}
                   </div>
-                  <div className="mt-2 flex items-start gap-2 text-sm font-medium text-slate-600">
-                    <MapPinned className="mt-0.5 h-4 w-4" />
-                    <span>{fullAddress || 'Address not linked yet'}</span>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2 text-sm font-medium text-slate-600">
-                    <Phone className="h-4 w-4" />
-                    {lead?.phone ?? booking.customer_phone ?? 'No phone saved'}
-                  </div>
-                  {fullAddress ? (
-                    <a
-                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand px-4 py-3 text-sm font-extrabold text-white"
-                      href={mapsDirectionsUrl(fullAddress)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Navigation className="h-4 w-4" />
-                      Give directions
-                    </a>
-                  ) : null}
-                </article>
+                  {dayBookings.map((booking) => {
+                    const lead = booking.leads;
+                    const fullAddress = [lead?.property_address, lead?.postcode].filter(Boolean).join(', ');
+                    const bookingTime = booking.booking_time
+                      ? new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(
+                          new Date(booking.booking_time)
+                        )
+                      : 'Time not set';
+
+                    return (
+                      <article key={booking.id} className="rounded-md border border-line bg-white p-4 shadow-soft">
+                        <h3 className="text-lg font-extrabold text-ink">
+                          {lead?.customer_name ?? booking.customer_name}
+                        </h3>
+                        <div className="mt-2 flex items-center gap-2 text-sm font-medium text-slate-600">
+                          <Clock className="h-4 w-4" />
+                          {bookingTime}
+                        </div>
+                        <div className="mt-2 flex items-start gap-2 text-sm font-medium text-slate-600">
+                          <MapPinned className="mt-0.5 h-4 w-4" />
+                          <span>{fullAddress || 'Address not linked yet'}</span>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2 text-sm font-medium text-slate-600">
+                          <Phone className="h-4 w-4" />
+                          {lead?.phone ?? booking.customer_phone ?? 'No phone saved'}
+                        </div>
+                        {fullAddress ? (
+                          <a
+                            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand px-4 py-3 text-sm font-extrabold text-white"
+                            href={mapsDirectionsUrl(fullAddress)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <Navigation className="h-4 w-4" />
+                            Give directions
+                          </a>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
               );
             })}
           </div>
         ) : (
           <div className="rounded-md border border-line bg-white p-5 text-center text-sm font-medium text-slate-500">
-            No bookings today
+            No bookings this week
           </div>
         )}
       </section>
